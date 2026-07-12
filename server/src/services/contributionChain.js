@@ -1,14 +1,18 @@
 const ContributionBlock = require('../models/contributionBlock');
 
-const createBlock = async ({ project, contributor, deltaData }) => {
-  const lastBlock = await ContributionBlock.findOne({ project }).sort({ index: -1 });
-
-  // deltaData should contain: content (string), type (code|markdown|image), size (number)
-  const { content, type, size } = deltaData;
-  // Ensure required fields exist
-  if (!content || !type || typeof size !== 'number') {
-    throw new Error('deltaData must include content, type, and size');
+const createBlock = async ({ project, contributor, content, type = 'markdown', size = null }) => {
+  if (!content) {
+    throw new Error('content is required');
   }
+
+  const deltaData = {
+    content,
+    type,
+    size: typeof size === 'number' ? size : content.length,
+  };
+
+  const lastBlock = await ContributionBlock.findOne({ project }).sort({ index: -1 });
+  const index = lastBlock ? lastBlock.index + 1 : 0;
   const prevBlockHash = lastBlock ? lastBlock.hash : null;
   const timestamp = new Date();
 

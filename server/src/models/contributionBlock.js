@@ -10,6 +10,7 @@ const contributionBlockSchema = new mongoose.Schema({
   index: { type: Number, required: true },
   timestamp: { type: Date, default: Date.now },
   peerUpvotes: { type: Number, default: 0 },
+  voters: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   expertRating: { type: Number, default: null },
   totalScore: { type: Number, default: 0 },
 });

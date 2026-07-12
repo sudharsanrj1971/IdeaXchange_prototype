@@ -1,24 +1,27 @@
-const { admin } = require('../config/firebase');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 
+// Verifies the backend-issued JWT (obtained via POST /api/auth/session).
+// This does NOT re-verify against Firebase on every request — the Firebase
+// token is only checked once, at session-exchange time.
 const verifyFirebaseToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization || '';
-    const idToken = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
 
-    if (!idToken) {
+    if (!token) {
       return res.status(401).json({ error: 'Missing authorization token' });
     }
 
-    const decoded = await admin.auth().verifyIdToken(idToken);
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is not set');
+    }
 
-    let user = await User.findOne({ firebaseUid: decoded.uid });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await User.findById(decoded.userId);
     if (!user) {
-      user = await User.create({
-        firebaseUid: decoded.uid,
-        name: decoded.name || decoded.email || 'Unnamed User',
-        email: decoded.email,
-      });
+      return res.status(401).json({ error: 'User not found' });
     }
 
     req.user = user;

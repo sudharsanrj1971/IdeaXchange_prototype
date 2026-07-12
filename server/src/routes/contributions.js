@@ -1,5 +1,6 @@
 const express = require('express');
 const { verifyFirebaseToken } = require('../middleware/auth');
+const { requireRole } = require('../middleware/requireRole');
 const { createBlock, verifyChain } = require('../services/contributionChain');
 const ContributionBlock = require('../models/contributionBlock');
 const Project = require('../models/project');
@@ -58,6 +59,11 @@ router.post('/:id/vote', verifyFirebaseToken, async (req, res) => {
     const block = await ContributionBlock.findById(req.params.id);
     if (!block) return res.status(404).json({ error: 'Not found' });
 
+    if (block.voters.some((v) => v.toString() === req.user._id.toString())) {
+      return res.status(409).json({ error: 'You have already voted on this contribution' });
+    }
+
+    block.voters.push(req.user._id);
     block.peerUpvotes += 1;
     block.totalScore = block.peerUpvotes + (block.expertRating ? block.expertRating * 2 : 0);
     await block.save();
@@ -74,9 +80,13 @@ router.post('/:id/vote', verifyFirebaseToken, async (req, res) => {
   }
 });
 
-router.post('/:id/expert-rate', verifyFirebaseToken, async (req, res) => {
+router.post('/:id/expert-rate', verifyFirebaseToken, requireRole('expert', 'admin'), async (req, res) => {
   try {
     const { rating } = req.body;
+    if (typeof rating !== 'number' || rating < 0 || rating > 5) {
+      return res.status(400).json({ error: 'rating must be a number between 0 and 5' });
+    }
+
     const block = await ContributionBlock.findById(req.params.id);
     if (!block) return res.status(404).json({ error: 'Not found' });
 

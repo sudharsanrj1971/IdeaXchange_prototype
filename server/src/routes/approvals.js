@@ -21,7 +21,7 @@ router.post('/', verifyFirebaseToken, async (req, res) => {
   }
 });
 
-router.get('/pending', verifyFirebaseToken, requireRole('reviewer', 'admin'), async (req, res) => {
+router.get('/pending', verifyFirebaseToken, requireRole('expert', 'admin'), async (req, res) => {
   try {
     const pending = await ApprovalRequest.find({ status: 'pending' }).populate('contributionBlock');
     res.json(pending);
@@ -30,7 +30,7 @@ router.get('/pending', verifyFirebaseToken, requireRole('reviewer', 'admin'), as
   }
 });
 
-router.patch('/:id', verifyFirebaseToken, requireRole('reviewer', 'admin'), async (req, res) => {
+router.patch('/:id', verifyFirebaseToken, requireRole('expert', 'admin'), async (req, res) => {
   try {
     const { status, reviewNote } = req.body;
     if (!['approved', 'rejected'].includes(status)) {
