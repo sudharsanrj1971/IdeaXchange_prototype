@@ -1,6 +1,19 @@
 require('dotenv').config();
+const { validateEnv } = require('./config/envValidator');
+validateEnv();
+
+const Sentry = require('@sentry/node');
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: 1.0,
+  });
+}
+
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const http = require('http');
 const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
@@ -8,25 +21,60 @@ const { Server } = require('socket.io');
 const { connectDB } = require('./config/db');
 const { initFirebase } = require('./config/firebase');
 
+const {
+  helmetConfig,
+  doubleCsrfProtection,
+  generateToken,
+  apiLimiter,
+  authLimiter
+} = require('./middleware/security');
+const globalErrorHandler = require('./middleware/globalErrorHandler');
+
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
 const projectsRouter = require('./routes/projects');
 const contributionsRouter = require('./routes/contributions');
 const approvalsRouter = require('./routes/approvals');
 const reputationRouter = require('./routes/reputation');
+const healthRouter = require('./routes/health');
 
 const app = express();
-app.use(cors());
-app.use(express.json());
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.use(helmetConfig);
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true
+}));
+app.use(express.json({ limit: '1mb' }));
+app.use(cookieParser());
 
-app.use('/api/auth', authRouter);
+// Rate limit all API routes
+app.use('/api', apiLimiter);
+
+// CSRF Token retrieval endpoint
+app.get('/api/csrf-token', (req, res) => {
+  res.json({ csrfToken: generateToken(req, res) });
+});
+
+// Protect all state-changing endpoints with CSRF token checks
+app.use(doubleCsrfProtection);
+
+// Routers
+app.use('/api/health', healthRouter);
+app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/contributions', contributionsRouter);
 app.use('/api/approvals', approvalsRouter);
 app.use('/api/reputation', reputationRouter);
+
+// Sentry error handler (must be placed before other error handlers)
+if (process.env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
+
+// Global error handler
+app.use(globalErrorHandler);
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
@@ -72,3 +120,5 @@ const start = async () => {
 };
 
 start();
+
+module.exports = { app, server };
