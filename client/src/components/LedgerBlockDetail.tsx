@@ -24,7 +24,7 @@ interface Props {
   index: number;
 }
 
-export default function LedgerBlockDetail({ block, index }: Props) {
+export default function LedgerBlockDetail({ block, index: _index }: Props) {
   return (
     <div className="mt-2 bg-gray-900/80 border border-purple-800 rounded-lg p-4 space-y-3 text-sm">
       {/* Hash chain */}

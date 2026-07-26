@@ -40,7 +40,7 @@ export default function AdminAudit() {
   const [verifyResult, setVerifyResult] = useState<IntegrityResult | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const headers = { Authorization: `Bearer ${jwt}` };
+const headers = React.useMemo(() => ({ Authorization: `Bearer ${jwt}` }), [jwt]);
 
   // Fetch state transitions
   useEffect(() => {
@@ -51,7 +51,7 @@ export default function AdminAudit() {
       .then(setTransitions)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [tab, jwt]);
+  }, [tab, jwt, headers]);
 
   // Fetch tampering logs
   useEffect(() => {
@@ -62,7 +62,7 @@ export default function AdminAudit() {
       .then(setTamperLogs)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [tab, jwt]);
+  }, [tab, jwt, headers]);
 
   const handleVerify = async () => {
     if (!verifyId.trim() || !jwt) return;
