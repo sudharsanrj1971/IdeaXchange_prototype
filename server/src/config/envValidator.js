@@ -9,6 +9,8 @@ const envSchema = z.object({
   RAFT_INTERNAL_SECRET: z.string().min(16, "RAFT_INTERNAL_SECRET must be at least 16 characters long"),
   BCRYPT_SALT_ROUNDS: z.coerce.number().default(12),
   ACCESS_TOKEN_TTL: z.string().default('15m'),
+  FIREBASE_SERVICE_ACCOUNT_BASE64: z.string().min(1, "FIREBASE_SERVICE_ACCOUNT_BASE64 is required (base64-encoded Firebase service account JSON)"),
+  CORS_ORIGIN: z.string().default('http://localhost:5173'),
 });
 
 function validateEnv() {

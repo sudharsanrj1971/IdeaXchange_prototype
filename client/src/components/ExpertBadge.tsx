@@ -1,5 +1,5 @@
 // src/components/ExpertBadge.tsx
-import React from 'react';
+
 
 interface Props {
   isExpert: boolean;

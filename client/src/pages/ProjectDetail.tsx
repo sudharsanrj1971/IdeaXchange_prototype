@@ -1,28 +1,32 @@
 // src/pages/ProjectDetail.tsx
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import StateStepper from '../components/StateStepper';
 import LedgerTimeline from '../components/LedgerTimeline';
 import ImpactScoreBadge from '../components/ImpactScoreBadge';
 import { fetchProject } from '../services/projectService';
-import { io, Socket } from 'socket.io-client';
-
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
+import { useAuth } from '../context/AuthContext';
+import { getSocket } from '../socket';
+import type { Socket } from 'socket.io-client';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
+  const { jwt } = useAuth();
   const [project, setProject] = useState<any>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
-    if (id) {
-      fetchProject(id).then(setProject);
+    if (id && jwt) {
+      fetchProject(id, jwt).then(setProject);
     }
-  }, [id]);
+  }, [id, jwt]);
 
   useEffect(() => {
-    if (!id) return;
-    const newSocket = io(BASE_URL, { transports: ['websocket'] });
+    if (!id || !jwt) return;
+    // Server's socket.io middleware requires an authenticated handshake
+    // token (see server/src/index.js) — a bare io() call was silently
+    // rejected, so live tampering/score-update events never arrived.
+    const newSocket = getSocket(jwt);
     newSocket.emit('joinProject', id);
 
     newSocket.on('scoreUpdate', (payload: any) => {
@@ -37,9 +41,9 @@ export default function ProjectDetail() {
 
     return () => {
       newSocket.emit('leaveProject', id);
-      newSocket.disconnect();
+      newSocket.off('scoreUpdate');
     };
-  }, [id]);
+  }, [id, jwt]);
 
   if (!project) {
     return <div className="text-center py-20 text-purple-300">Loading project…</div>;

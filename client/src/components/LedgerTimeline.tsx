@@ -1,5 +1,5 @@
 // src/components/LedgerTimeline.tsx
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import LedgerBlockDetail from './LedgerBlockDetail';
 import { useAuth } from '../context/AuthContext';

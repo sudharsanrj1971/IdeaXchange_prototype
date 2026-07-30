@@ -9,8 +9,16 @@ import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { auth } from '../firebase';
 
+interface AppProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: 'student' | 'expert' | 'admin';
+}
+
 interface AuthContextValue {
   user: User | null;
+  profile: AppProfile | null;
   jwt: string | null;
   loading: boolean;
   refreshJwt: () => Promise<void>;
@@ -23,19 +31,36 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<AppProfile | null>(null);
   const [jwt, setJwt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const exchangeToken = useCallback(async (firebaseUser: User) => {
     const idToken = await firebaseUser.getIdToken();
+
+    // /api/auth/session is a POST behind the CSRF double-submit check, so
+    // we need the CSRF cookie (credentials:'include') plus a matching
+    // x-csrf-token header fetched from /api/csrf-token — without both of
+    // these, login itself was rejected with 403.
+    const csrfRes = await fetch(`${BASE_URL}/api/csrf-token`, {
+      credentials: 'include',
+    });
+    if (!csrfRes.ok) throw new Error('Failed to fetch CSRF token');
+    const { csrfToken } = await csrfRes.json();
+
     const res = await fetch(`${BASE_URL}/api/auth/session`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-csrf-token': csrfToken,
+      },
       body: JSON.stringify({ idToken }),
     });
     if (!res.ok) throw new Error('Token exchange failed');
-    const { token } = await res.json();
+    const { token, user: appProfile } = await res.json();
     setJwt(token);
+    setProfile(appProfile ?? null);
   }, []);
 
   const refreshJwt = useCallback(async () => {
@@ -46,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await firebaseSignOut(auth);
     setJwt(null);
     setUser(null);
+    setProfile(null);
   }, []);
 
   useEffect(() => {
@@ -59,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         setJwt(null);
+        setProfile(null);
       }
       setLoading(false);
     });
@@ -66,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [exchangeToken]);
 
   return (
-    <AuthContext.Provider value={{ user, jwt, loading, refreshJwt, logout }}>
+    <AuthContext.Provider value={{ user, profile, jwt, loading, refreshJwt, logout }}>
       {children}
     </AuthContext.Provider>
   );

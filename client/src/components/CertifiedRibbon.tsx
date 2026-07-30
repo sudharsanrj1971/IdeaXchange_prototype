@@ -1,5 +1,5 @@
 // src/components/CertifiedRibbon.tsx
-import React from 'react';
+
 
 interface Props {
   isCertified: boolean;

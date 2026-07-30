@@ -38,7 +38,15 @@ router.post('/session', async (req, res) => {
       expiresIn: JWT_EXPIRES_IN,
     });
 
-    res.json({ token });
+    res.json({
+      token,
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
   } catch (err) {
     console.error('Session exchange failed:', err.message);
     res.status(401).json({ error: 'Could not establish session' });

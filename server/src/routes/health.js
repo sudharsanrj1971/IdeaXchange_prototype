@@ -51,8 +51,13 @@ router.get('/', async (req, res) => {
     health.checks.raft = { status: 'unhealthy', error: err.message };
   }
 
-  const isHealthy = Object.values(health.checks).every(check => check.status === 'healthy');
-  
+  // Redis isn't wired into anything else in this app (no session/cache/rate
+  // -limit store) — it only exists to be reported here. Don't let it gate
+  // the overall health status, or environments that never provisioned
+  // Redis get restart-looped by Docker/Render healthchecks for no reason.
+  const criticalChecks = ['mongodb', 'raft'];
+  const isHealthy = criticalChecks.every(name => health.checks[name]?.status === 'healthy');
+
   res.status(isHealthy ? 200 : 503).json(health);
 });
 

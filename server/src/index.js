@@ -41,8 +41,22 @@ const healthRouter = require('./routes/health');
 const app = express();
 
 app.use(helmetConfig);
+// Browsers reject `Access-Control-Allow-Origin: *` combined with
+// `Access-Control-Allow-Credentials: true` outright, so a literal '*' here
+// silently breaks every cookie-bearing cross-origin request (which is all
+// of them, since the CSRF cookie must ride along). CORS_ORIGIN can be a
+// single origin or a comma-separated list; we reflect back whichever of
+// those matches the request's Origin header.
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '1mb' }));
@@ -111,12 +125,17 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.SERVER_PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
 const start = async () => {
-  await connectDB();
-  initFirebase();
-  server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  try {
+    await connectDB();
+    initFirebase();
+    server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  } catch (err) {
+    console.error('Failed to start server:', err.message);
+    process.exit(1);
+  }
 };
 
 start();

@@ -1,40 +1,40 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useIdeasApi, type Idea } from '../api/ideas';
+import { useProjectsApi, type Project } from '../api/projects';
 import './Dashboard.css';
 
-type SortMode = 'newest' | 'top' | 'trending';
+type SortMode = 'newest' | 'impact';
 
 const TAG_OPTIONS = ['AI', 'Web', 'Mobile', 'Design', 'Data', 'Blockchain', 'Education', 'Health'];
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
-  const { listIdeas, upvoteIdea, createIdea } = useIdeasApi();
+  const { user, profile, logout } = useAuth();
+  const { listProjects, createProject } = useProjectsApi();
   const navigate = useNavigate();
 
-  const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [sort, setSort] = useState<SortMode>('newest');
   const [search, setSearch] = useState('');
   const [selectedTag, setSelectedTag] = useState('');
 
-  // Create idea modal
+  // Create project modal
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newTags, setNewTags] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
 
-  const loadIdeas = async () => {
+  const loadProjects = async () => {
     setLoading(true);
     setError('');
     try {
-      const data = await listIdeas({ sort, search, tags: selectedTag });
-      setIdeas(data.ideas);
+      const data = await listProjects();
+      setProjects(data);
     } catch (e) {
-      setError('Failed to load ideas. Is the server running?');
+      setError('Failed to load projects. Is the server running?');
       console.error(e);
     } finally {
       setLoading(false);
@@ -42,30 +42,39 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    loadIdeas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sort, selectedTag]);
+    loadProjects();
+  }, []);
+
+  // The backend has no search/sort/tag query params (see api/projects.ts),
+  // so filtering and sorting happen here against the full list.
+  const visibleProjects = useMemo(() => {
+    let result = projects;
+    if (selectedTag) {
+      result = result.filter((p) => p.tags.includes(selectedTag));
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter(
+        (p) => p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q),
+      );
+    }
+    return [...result].sort((a, b) =>
+      sort === 'impact'
+        ? b.impactScore - a.impactScore
+        : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }, [projects, selectedTag, search, sort]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    loadIdeas();
-  };
-
-  const handleUpvote = async (idea: Idea) => {
-    try {
-      const updated = await upvoteIdea(idea._id);
-      setIdeas((prev) => prev.map((i) => (i._id === updated._id ? updated : i)));
-    } catch (e) {
-      console.error(e);
-    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
     try {
-      const idea = await createIdea({ title: newTitle, description: newDesc, tags: newTags });
-      setIdeas((prev) => [idea, ...prev]);
+      const project = await createProject({ title: newTitle, description: newDesc, tags: newTags });
+      setProjects((prev) => [project, ...prev]);
       setShowCreate(false);
       setNewTitle('');
       setNewDesc('');
@@ -91,13 +100,13 @@ export default function Dashboard() {
         </div>
         <div className="dash-nav-actions">
           <button id="btn-create-idea" className="dash-create-btn" onClick={() => setShowCreate(true)}>
-            + New Idea
+            + New Project
           </button>
-          <Link to="/profile" className="dash-avatar" title={user?.displayName ?? user?.email ?? ''}>
+          <Link to="/profile" className="dash-avatar" title={profile?.name ?? user?.email ?? ''}>
             {user?.photoURL
               ? <img src={user.photoURL} alt="avatar" className="dash-avatar-img" />
               : <span className="dash-avatar-initial">
-                  {(user?.displayName ?? user?.email ?? 'U')[0].toUpperCase()}
+                  {(profile?.name ?? user?.email ?? 'U')[0].toUpperCase()}
                 </span>
             }
           </Link>
@@ -112,12 +121,11 @@ export default function Dashboard() {
         <h1>Discover & Build Together</h1>
         <p>Share your ideas, find collaborators, build something amazing</p>
 
-        {/* Search */}
         <form id="form-search" className="dash-search" onSubmit={handleSearch}>
           <input
             id="input-search"
             type="text"
-            placeholder="Search ideas…"
+            placeholder="Search projects…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -140,7 +148,7 @@ export default function Dashboard() {
           ))}
         </div>
         <div className="dash-sort">
-          {(['newest', 'top', 'trending'] as SortMode[]).map((s) => (
+          {(['newest', 'impact'] as SortMode[]).map((s) => (
             <button
               key={s}
               id={`sort-${s}`}
@@ -158,66 +166,56 @@ export default function Dashboard() {
         {loading && (
           <div className="dash-loading">
             <div className="spinner" />
-            <p>Loading ideas…</p>
+            <p>Loading projects…</p>
           </div>
         )}
         {error && (
           <div className="dash-error">
             <p>{error}</p>
-            <button onClick={loadIdeas}>Retry</button>
+            <button onClick={loadProjects}>Retry</button>
           </div>
         )}
-        {!loading && !error && ideas.length === 0 && (
+        {!loading && !error && visibleProjects.length === 0 && (
           <div className="dash-empty">
             <span className="dash-empty-icon">🌱</span>
-            <p>No ideas yet. Be the first to share one!</p>
-            <button onClick={() => setShowCreate(true)}>Share an Idea</button>
+            <p>No projects yet. Be the first to share one!</p>
+            <button onClick={() => setShowCreate(true)}>Share a Project</button>
           </div>
         )}
-        {!loading && !error && ideas.length > 0 && (
+        {!loading && !error && visibleProjects.length > 0 && (
           <div className="dash-grid">
-            {ideas.map((idea) => (
-              <article key={idea._id} className="idea-card">
+            {visibleProjects.map((project) => (
+              <article key={project._id} className="idea-card">
                 <div className="idea-card-header">
                   <div className="idea-card-author">
                     <span className="idea-author-avatar">
-                      {idea.author.avatarUrl
-                        ? <img src={idea.author.avatarUrl} alt="" />
-                        : idea.author.displayName[0].toUpperCase()
-                      }
+                      {project.owner.name[0].toUpperCase()}
                     </span>
-                    <span className="idea-author-name">{idea.author.displayName}</span>
+                    <span className="idea-author-name">{project.owner.name}</span>
                   </div>
-                  <span className={`idea-status idea-status-${idea.status}`}>{idea.status}</span>
+                  <span className={`idea-status idea-status-${project.status}`}>{project.status}</span>
                 </div>
 
-                <Link to={`/ideas/${idea._id}`} className="idea-card-title">
-                  {idea.title}
+                <Link to={`/projects/${project._id}`} className="idea-card-title">
+                  {project.title}
                 </Link>
 
-                <p className="idea-card-desc">{idea.description}</p>
+                <p className="idea-card-desc">{project.description}</p>
 
-                {idea.tags.length > 0 && (
+                {project.tags.length > 0 && (
                   <div className="idea-tags">
-                    {idea.tags.map((tag) => (
+                    {project.tags.map((tag) => (
                       <span key={tag} className="idea-tag">{tag}</span>
                     ))}
                   </div>
                 )}
 
                 <div className="idea-card-footer">
-                  <button
-                    id={`btn-upvote-${idea._id}`}
-                    className="idea-upvote-btn"
-                    onClick={() => handleUpvote(idea)}
-                  >
-                    ▲ {idea.upvotes}
-                  </button>
                   <span className="idea-contributions">
-                    💬 {idea.contributionCount} contributions
+                    ⚡ {project.impactScore} impact
                   </span>
                   <span className="idea-date">
-                    {new Date(idea.createdAt).toLocaleDateString()}
+                    {new Date(project.createdAt).toLocaleDateString()}
                   </span>
                 </div>
               </article>
@@ -226,12 +224,12 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* Create Idea Modal */}
+      {/* Create Project Modal */}
       {showCreate && (
         <div className="modal-overlay" onClick={() => setShowCreate(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Share a New Idea</h2>
+              <h2>Share a New Project</h2>
               <button id="btn-close-modal" className="modal-close" onClick={() => setShowCreate(false)}>✕</button>
             </div>
             <form id="form-create-idea" onSubmit={handleCreate}>
@@ -280,7 +278,7 @@ export default function Dashboard() {
                 className="modal-submit-btn"
                 disabled={creating}
               >
-                {creating ? 'Posting…' : 'Post Idea'}
+                {creating ? 'Posting…' : 'Post Project'}
               </button>
             </form>
           </div>

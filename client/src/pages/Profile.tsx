@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useUsersApi, type UserProfile } from '../api/users';
-import { useIdeasApi, type Idea } from '../api/ideas';
+import { useProjectsApi, type Project } from '../api/projects';
 import RPBadge from '../components/RPBadge';
 import ExpertBadge from '../components/ExpertBadge';
 import './Profile.css';
@@ -10,26 +10,26 @@ import './Profile.css';
 export default function Profile() {
   const { user, logout } = useAuth();
   const { getMe, updateMe } = useUsersApi();
-  const { getMyIdeas } = useIdeasApi();
+  const { listProjects } = useProjectsApi();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [myIdeas, setMyIdeas] = useState<Idea[]>([]);
+  const [myProjects, setMyProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [displayName, setDisplayName] = useState('');
-  const [bio, setBio] = useState('');
+  const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [prof, ideas] = await Promise.all([getMe(), getMyIdeas()]);
+        const [prof, allProjects] = await Promise.all([getMe(), listProjects()]);
         setProfile(prof);
-        setMyIdeas(ideas);
-        setDisplayName(prof.displayName);
-        setBio(prof.bio ?? '');
+        // The backend has no "my projects" endpoint, so this filters the
+        // full project list client-side by ownership.
+        setMyProjects(allProjects.filter((p) => p.owner._id === prof._id));
+        setName(prof.name);
       } catch (e) {
         setError('Failed to load profile. Is the server running?');
         console.error(e);
@@ -45,7 +45,7 @@ export default function Profile() {
     e.preventDefault();
     setSaving(true);
     try {
-      const updated = await updateMe({ displayName, bio });
+      const updated = await updateMe({ name });
       setProfile(updated);
       setEditing(false);
     } catch (e) {
@@ -85,30 +85,20 @@ export default function Profile() {
             <div className="profile-avatar">
               {user?.photoURL
                 ? <img src={user.photoURL} alt="avatar" />
-                : <span>{(profile?.displayName ?? user?.email ?? 'U')[0].toUpperCase()}</span>
+                : <span>{(profile?.name ?? user?.email ?? 'U')[0].toUpperCase()}</span>
               }
             </div>
 
             {editing ? (
               <form id="form-edit-profile" onSubmit={handleSave} className="profile-edit-form">
                 <div className="profile-field">
-                  <label htmlFor="input-display-name">Display Name</label>
+                  <label htmlFor="input-display-name">Name</label>
                   <input
                     id="input-display-name"
                     type="text"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     required
-                  />
-                </div>
-                <div className="profile-field">
-                  <label htmlFor="input-bio">Bio</label>
-                  <textarea
-                    id="input-bio"
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="Tell the community about yourself…"
-                    rows={4}
                   />
                 </div>
                 <div className="profile-edit-actions">
@@ -122,11 +112,10 @@ export default function Profile() {
               </form>
             ) : (
               <>
-                <h1 className="profile-name">{profile?.displayName}</h1>
+                <h1 className="profile-name">{profile?.name}</h1>
                 <p className="profile-email">{user?.email}</p>
-                {profile?.bio && <p className="profile-bio">{profile.bio}</p>}
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <RPBadge points={profile?.reputation ?? 0} />
+                  <RPBadge points={profile?.reputationScore ?? 0} />
                   <ExpertBadge isExpert={profile?.role === 'expert'} />
                 </div>
                 <button id="btn-edit-profile" className="profile-edit-btn" onClick={() => setEditing(true)}>
@@ -138,50 +127,45 @@ export default function Profile() {
             {/* Stats */}
             <div className="profile-stats">
               <div className="profile-stat">
-                <span className="profile-stat-value">⭐ {profile?.reputation ?? 0}</span>
+                <span className="profile-stat-value">⭐ {profile?.reputationScore ?? 0}</span>
                 <span className="profile-stat-label">Reputation</span>
               </div>
               <div className="profile-stat">
-                <span className="profile-stat-value">💡 {profile?.ideasCount ?? myIdeas.length}</span>
-                <span className="profile-stat-label">Ideas</span>
-              </div>
-              <div className="profile-stat">
-                <span className="profile-stat-value">🤝 {profile?.contributionsCount ?? 0}</span>
-                <span className="profile-stat-label">Contributions</span>
+                <span className="profile-stat-value">💡 {myProjects.length}</span>
+                <span className="profile-stat-label">Projects</span>
               </div>
             </div>
 
             <p className="profile-joined">
-              Joined {profile?.joinedAt
-                ? new Date(profile.joinedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+              Joined {profile?.createdAt
+                ? new Date(profile.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
                 : '—'
               }
             </p>
           </div>
         </aside>
 
-        {/* My ideas */}
+        {/* My projects */}
         <main className="profile-main">
-          <h2 className="profile-section-title">My Ideas</h2>
-          {myIdeas.length === 0 ? (
+          <h2 className="profile-section-title">My Projects</h2>
+          {myProjects.length === 0 ? (
             <div className="profile-empty">
               <span>🌱</span>
-              <p>You haven't shared any ideas yet.</p>
-              <Link to="/" className="profile-cta-link">Share your first idea →</Link>
+              <p>You haven't shared any projects yet.</p>
+              <Link to="/" className="profile-cta-link">Share your first project →</Link>
             </div>
           ) : (
             <div className="profile-ideas-list">
-              {myIdeas.map((idea) => (
-                <Link key={idea._id} to={`/ideas/${idea._id}`} className="profile-idea-card">
+              {myProjects.map((project) => (
+                <Link key={project._id} to={`/projects/${project._id}`} className="profile-idea-card">
                   <div className="profile-idea-header">
-                    <h3 className="profile-idea-title">{idea.title}</h3>
-                    <span className={`idea-status idea-status-${idea.status}`}>{idea.status}</span>
+                    <h3 className="profile-idea-title">{project.title}</h3>
+                    <span className={`idea-status idea-status-${project.status}`}>{project.status}</span>
                   </div>
-                  <p className="profile-idea-desc">{idea.description}</p>
+                  <p className="profile-idea-desc">{project.description}</p>
                   <div className="profile-idea-meta">
-                    <span>▲ {idea.upvotes}</span>
-                    <span>💬 {idea.contributionCount}</span>
-                    <span>{new Date(idea.createdAt).toLocaleDateString()}</span>
+                    <span>⚡ {project.impactScore}</span>
+                    <span>{new Date(project.createdAt).toLocaleDateString()}</span>
                   </div>
                 </Link>
               ))}

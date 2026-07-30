@@ -1,5 +1,5 @@
 // src/components/ImpactScoreBadge.tsx
-import React from 'react';
+
 
 interface Props {
   score: number;

@@ -5,7 +5,6 @@ import RequireAdmin from './components/RequireAdmin';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import IdeaDetail from './pages/IdeaDetail';
 import Profile from './pages/Profile';
 import ProjectDetail from './pages/ProjectDetail';
 import AdminAudit from './pages/AdminAudit';
@@ -21,7 +20,6 @@ function App() {
           {/* Protected */}
           <Route element={<ProtectedRoute />}> 
             <Route path="/" element={<Dashboard />} />
-            <Route path="/ideas/:id" element={<IdeaDetail />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/profile" element={<Profile />} />
             {/* Admin protected */}

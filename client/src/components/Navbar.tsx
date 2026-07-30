@@ -5,8 +5,8 @@ import { useAuth } from '../context/AuthContext';
 
 const Navbar: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const { user, profile } = useAuth();
+  const isAdmin = profile?.role === 'admin';
   const avatarUrl = user?.photoURL || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>

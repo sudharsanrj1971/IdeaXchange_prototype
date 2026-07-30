@@ -1,5 +1,5 @@
 // src/components/RPBadge.tsx
-import React from 'react';
+
 
 interface Props {
   points: number;

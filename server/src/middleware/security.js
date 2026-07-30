@@ -23,7 +23,14 @@ const { doubleCsrfProtection, generateToken } = doubleCsrf({
   cookieName: "__Host-ps-csrf-token",
   cookieOptions: {
     httpOnly: true,
-    sameSite: "strict",
+    // Frontend (Vercel) and backend (Render) live on different origins, so
+    // this is a cross-site request from the browser's point of view.
+    // SameSite=Strict (and even Lax) means the cookie is never attached to
+    // cross-site requests, which made every CSRF-protected route
+    // (login/session exchange, contributions, votes, approvals...) fail in
+    // production. SameSite=None is required for cross-site cookies, and
+    // requires Secure=true (already set below).
+    sameSite: "none",
     secure: true,
   },
   size: 64,

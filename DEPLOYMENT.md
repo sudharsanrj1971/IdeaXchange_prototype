@@ -17,16 +17,17 @@ We recommend using [Render](https://render.com/) for the Node.js backend due to 
 3. For the runtime, select **Docker**.
 4. Set the Root Directory to `server/`.
 5. Under Advanced, add the following Environment Variables (matching your local `.env`):
-   - `PORT=3000` (Render defaults to 10000, but map it accordingly or let Render handle the port)
    - `NODE_ENV=production`
    - `MONGODB_URI=your_mongo_atlas_connection_string`
-   - `REDIS_URL=your_render_redis_url`
-   - `JWT_SECRET=your_secure_random_string`
-   - `PLATFORM_SIGNING_KEY=your_secure_signing_key`
-   - `RAFT_INTERNAL_SECRET=your_secure_raft_secret`
-6. Add the Firebase service account JSON. Since you can't easily upload a file to Render's environment variables, you have two options:
-   - **Option A (Secret File)**: Under Advanced -> Secret Files, add a file named `key.json` and paste the contents of your Firebase service account JSON. Ensure your code points `FIREBASE_CREDENTIALS` to this file path if modified.
-   - **Option B (Base64 Env Var)**: Encode your `key.json` to Base64, store it as `FIREBASE_CREDENTIALS_BASE64`, and decode it in `src/index.js` before initialization.
+   - `REDIS_URL=your_render_redis_url` (optional — only used for the informational `redis` field on `/api/health`; the app runs fine without it)
+   - `JWT_SECRET=your_secure_random_string` (32+ chars)
+   - `PLATFORM_SIGNING_KEY=your_secure_signing_key` (32+ chars)
+   - `RAFT_INTERNAL_SECRET=your_secure_raft_secret` (16+ chars)
+   - `CORS_ORIGIN=https://your-vercel-frontend-url.vercel.app` (comma-separate multiple origins, e.g. to also allow a preview URL)
+   - Leave `PORT` unset — Render injects its own and the app reads `process.env.PORT` for it.
+6. Add the Firebase service account JSON. The app reads it from a single env var, `FIREBASE_SERVICE_ACCOUNT_BASE64` (see `src/config/firebase.js`):
+   - Encode your `key.json` to Base64: `base64 -i key.json | tr -d '\n'` (or `certutil -encode` on Windows).
+   - Store the result as the `FIREBASE_SERVICE_ACCOUNT_BASE64` environment variable in Render. No code changes needed — it's decoded automatically at startup.
 7. Click **Create Web Service**.
 
 ## 2. Deploying the Frontend (Vercel)

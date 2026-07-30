@@ -1,4 +1,4 @@
-import React from 'react';
+
 import ContributionCard from './ContributionCard';
 
 interface LedgerBlock {

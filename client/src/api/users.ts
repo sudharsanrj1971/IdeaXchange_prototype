@@ -1,15 +1,15 @@
 import { useApiClient } from './client';
 
+// Matches server/src/models/user.js and the fields GET /api/users/me /
+// GET /api/users/:id actually return — no displayName/bio/avatarUrl/
+// ideasCount/contributionsCount fields exist on the backend.
 export interface UserProfile {
   _id: string;
-  displayName: string;
+  name: string;
   email: string;
-  avatarUrl?: string;
-  bio?: string;
-  reputation: number;
-  ideasCount: number;
-  contributionsCount: number;
-  joinedAt: string;
+  role: 'student' | 'expert' | 'admin';
+  reputationScore: number;
+  createdAt: string;
 }
 
 export function useUsersApi() {
@@ -19,10 +19,9 @@ export function useUsersApi() {
 
   const getUser = (id: string) => api.get<UserProfile>(`/api/users/${id}`);
 
-  const updateMe = (data: Partial<{ displayName: string; bio: string; avatarUrl: string }>) =>
-    api.put<UserProfile>('/api/users/me', data);
+  // PATCH /api/users/me only accepts `name` (see server/src/routes/users.js)
+  const updateMe = (data: Partial<{ name: string }>) =>
+    api.patch<UserProfile>('/api/users/me', data);
 
-  const getLeaderboard = () => api.get<UserProfile[]>('/api/users/leaderboard');
-
-  return { getMe, getUser, updateMe, getLeaderboard };
+  return { getMe, getUser, updateMe };
 }

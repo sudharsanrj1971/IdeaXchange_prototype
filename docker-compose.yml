@@ -1,5 +1,26 @@
 version: '3.8'
 
+x-app-env: &app-env
+  PORT: 3000
+  NODE_ENV: production
+  MONGODB_URI: mongodb://mongo:27017/ideaxchange
+  REDIS_URL: redis://redis:6379
+  # Secrets are pulled from a local .env file (see .env.example) rather than
+  # hardcoded here — docker compose automatically reads a .env file next to
+  # this compose file and substitutes ${VARS} below.
+  JWT_SECRET: ${JWT_SECRET}
+  PLATFORM_SIGNING_KEY: ${PLATFORM_SIGNING_KEY}
+  RAFT_INTERNAL_SECRET: ${RAFT_INTERNAL_SECRET}
+  FIREBASE_SERVICE_ACCOUNT_BASE64: ${FIREBASE_SERVICE_ACCOUNT_BASE64}
+  CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+
+x-app-healthcheck: &app-healthcheck
+  test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+  interval: 10s
+  timeout: 5s
+  retries: 3
+  start_period: 15s
+
 services:
   nginx:
     image: nginx:alpine
@@ -19,46 +40,31 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
-    environment:
-      - PORT=3000
-      - NODE_ENV=production
-      - MONGODB_URI=mongodb://mongo:27017/ideaxchange
-      - REDIS_URL=redis://redis:6379
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+    environment: *app-env
+    depends_on:
+      - mongo
+      - redis
+    healthcheck: *app-healthcheck
 
   app-node-2:
     build:
       context: ./server
       dockerfile: Dockerfile
-    environment:
-      - PORT=3000
-      - NODE_ENV=production
-      - MONGODB_URI=mongodb://mongo:27017/ideaxchange
-      - REDIS_URL=redis://redis:6379
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+    environment: *app-env
+    depends_on:
+      - mongo
+      - redis
+    healthcheck: *app-healthcheck
 
   app-node-3:
     build:
       context: ./server
       dockerfile: Dockerfile
-    environment:
-      - PORT=3000
-      - NODE_ENV=production
-      - MONGODB_URI=mongodb://mongo:27017/ideaxchange
-      - REDIS_URL=redis://redis:6379
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+    environment: *app-env
+    depends_on:
+      - mongo
+      - redis
+    healthcheck: *app-healthcheck
 
   mongo:
     image: mongo:6.0
