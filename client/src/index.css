@@ -10,24 +10,24 @@
   --color-accent: var(--accent);
   --color-accent-bg: var(--accent-bg);
   --color-accent-border: var(--accent-border);
-  --color-teal: #1d9e75;
-  --color-teal-bg: rgba(29, 158, 117, 0.12);
-  --color-coral: #d85a30;
-  --color-coral-bg: rgba(216, 90, 48, 0.12);
-  --color-pink: #d4537e;
-  --color-pink-bg: rgba(212, 83, 126, 0.12);
+  --color-amber: #f5a623;
+  --color-amber-bg: rgba(245, 166, 35, 0.14);
+  --color-green: #3fb950;
+  --color-green-bg: rgba(63, 185, 80, 0.14);
+  --color-blue: #2f8fea;
+  --color-blue-bg: rgba(47, 143, 234, 0.14);
 }
 
 :root {
-  --text: #6b6375;
-  --text-h: #251f2e;
-  --bg: #faf7f2;
+  --text: #5a5568;
+  --text-h: #17131f;
+  --bg: #ffffff;
   --surface: #ffffff;
-  --border: #ece6dd;
-  --accent: #7c5cfc;
-  --accent-bg: rgba(124, 92, 252, 0.1);
-  --accent-border: rgba(124, 92, 252, 0.4);
-  --shadow: rgba(37, 31, 46, 0.06) 0 4px 14px, rgba(37, 31, 46, 0.04) 0 1px 3px;
+  --border: #e8e4ee;
+  --accent: #f0397e;
+  --accent-bg: rgba(240, 57, 126, 0.1);
+  --accent-border: rgba(240, 57, 126, 0.4);
+  --shadow: rgba(23, 19, 31, 0.08) 0 6px 18px, rgba(23, 19, 31, 0.05) 0 2px 5px;
 
   --sans: 'Segoe UI', system-ui, Roboto, sans-serif;
   --heading: 'Segoe UI', system-ui, Roboto, sans-serif;
@@ -44,15 +44,15 @@
 }
 
 .dark {
-  --text: #b7afc4;
-  --text-h: #f3f0f7;
-  --bg: #1c1a22;
-  --surface: #26232e;
-  --border: #38343f;
-  --accent: #a08bff;
-  --accent-bg: rgba(160, 139, 255, 0.16);
-  --accent-border: rgba(160, 139, 255, 0.45);
-  --shadow: rgba(0, 0, 0, 0.4) 0 4px 14px, rgba(0, 0, 0, 0.3) 0 1px 3px;
+  --text: #beb8cc;
+  --text-h: #faf8fc;
+  --bg: #15121c;
+  --surface: #201c2a;
+  --border: #352f42;
+  --accent: #ff5c9c;
+  --accent-bg: rgba(255, 92, 156, 0.18);
+  --accent-border: rgba(255, 92, 156, 0.5);
+  --shadow: rgba(0, 0, 0, 0.45) 0 6px 18px, rgba(0, 0, 0, 0.3) 0 2px 5px;
 }
 
 * {
@@ -72,18 +72,19 @@ body {
 
 h1, h2, h3 {
   font-family: var(--heading);
-  font-weight: 600;
+  font-weight: 800;
   color: var(--text-h);
   margin: 0;
+  letter-spacing: -0.6px;
 }
 
-h1 { font-size: 32px; letter-spacing: -0.4px; }
-h2 { font-size: 22px; letter-spacing: -0.2px; }
-h3 { font-size: 17px; }
+h1 { font-size: 40px; }
+h2 { font-size: 26px; }
+h3 { font-size: 18px; }
 
 p { margin: 0; }
 
-a { color: var(--accent); text-decoration: none; }
+a { color: var(--accent); text-decoration: none; font-weight: 600; }
 a:hover { text-decoration: underline; }
 
 button {
@@ -99,19 +100,20 @@ code {
   color: var(--text-h);
 }
 
-/* Friendly card hub — shared building blocks used across pages */
+/* Bold student hub — shared building blocks used across pages */
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  border: 2px solid var(--border);
+  border-radius: 18px;
   padding: 20px;
   box-shadow: var(--shadow);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .card--interactive:hover {
-  transform: translateY(-2px);
-  box-shadow: rgba(37, 31, 46, 0.1) 0 8px 20px, rgba(37, 31, 46, 0.05) 0 2px 6px;
+  transform: translateY(-3px) rotate(-0.3deg);
+  border-color: var(--accent-border);
+  box-shadow: rgba(23, 19, 31, 0.14) 0 10px 24px, rgba(23, 19, 31, 0.06) 0 3px 8px;
 }
 
 .btn {
@@ -119,14 +121,16 @@ code {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-weight: 600;
+  font-weight: 800;
   font-size: 14px;
   border-radius: 999px;
-  padding: 9px 18px;
-  border: 1px solid transparent;
+  padding: 10px 20px;
+  border: 2px solid transparent;
   cursor: pointer;
-  transition: filter 0.15s ease, background 0.15s ease;
+  transition: filter 0.15s ease, transform 0.1s ease;
 }
+
+.btn:active { transform: scale(0.97); }
 
 .btn--primary {
   background: var(--accent);
@@ -146,7 +150,7 @@ code {
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  font-weight: 600;
-  padding: 3px 10px;
+  font-weight: 800;
+  padding: 4px 12px;
   border-radius: 999px;
 }
